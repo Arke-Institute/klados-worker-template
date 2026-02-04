@@ -11,8 +11,8 @@
     "register:prod": "npx tsx scripts/register.ts --production"
   },
   "dependencies": {
-    "@arke-institute/rhiza": "^0.1.0",
-    "@arke-institute/sdk": "^2.9.0",
+    "@arke-institute/rhiza": "^0.2.0",
+    "@arke-institute/sdk": "^2.10.0",
     "hono": "^4.0.0"
   },
   "devDependencies": {
