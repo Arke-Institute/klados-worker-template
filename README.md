@@ -116,6 +116,8 @@ klados-worker-template/
 │   ├── index.ts    # Hono router + fetch handler
 │   ├── job.ts      # Your processing logic
 │   └── types.ts    # Type definitions
+├── test/
+│   └── worker.test.ts  # E2E tests
 ├── scripts/
 │   └── register.ts # Automated registration script
 ├── agent.json      # Klados configuration
@@ -221,6 +223,58 @@ ARKE_USER_KEY=uk_... npm run register
 
 # Register (production)
 ARKE_USER_KEY=uk_... npm run register:prod
+```
+
+## Testing
+
+The template includes E2E test support using `@arke-institute/klados-testing`.
+
+### Running Tests
+
+```bash
+# Run E2E tests
+ARKE_USER_KEY=uk_... KLADOS_ID=klados_... npm test
+
+# Watch mode
+ARKE_USER_KEY=uk_... KLADOS_ID=klados_... npm run test:watch
+```
+
+### Test Environment Variables
+
+| Variable | Description |
+|----------|-------------|
+| `ARKE_USER_KEY` | Your Arke user API key (uk_...) |
+| `KLADOS_ID` | The klados entity ID from registration |
+| `ARKE_API_BASE` | API base URL (default: https://arke-v1.arke.institute) |
+| `ARKE_NETWORK` | Network to use: 'test' or 'main' (default: test) |
+
+### Writing Tests
+
+See `test/worker.test.ts` for a complete example. The testing library provides:
+
+```typescript
+import {
+  configureTestClient,
+  createCollection,
+  createEntity,
+  deleteEntity,
+  invokeKlados,
+  waitForKladosLog,
+  assertLogCompleted,
+  assertLogHasMessages,
+} from '@arke-institute/klados-testing';
+
+// Configure once in beforeAll
+configureTestClient({
+  apiBase: process.env.ARKE_API_BASE!,
+  userKey: process.env.ARKE_USER_KEY!,
+  network: 'test',
+});
+
+// Invoke and verify
+const result = await invokeKlados({ ... });
+const log = await waitForKladosLog(jobCollectionId);
+assertLogCompleted(log);
 ```
 
 ## Environment Variables
