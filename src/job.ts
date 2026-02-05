@@ -24,7 +24,7 @@ import type { TargetProperties, OutputProperties } from './types';
  */
 export async function processJob(job: KladosJob): Promise<string[]> {
   job.log.info('Starting job processing', {
-    target: job.request.target,
+    target: job.request.target_entity,
     isWorkflow: job.isWorkflow,
   });
 
