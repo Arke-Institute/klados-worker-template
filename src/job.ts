@@ -79,10 +79,12 @@ export async function processJob(job: KladosJob): Promise<string[]> {
     processed_at: new Date().toISOString(),
   };
 
+  // Create output in target_collection (where work happens)
+  // NOT job_collection (which is only for klados_log entities)
   const { data: output, error } = await job.client.api.POST('/entities', {
     body: {
       type: 'processed_output', // Customize the output type
-      collection: job.request.job_collection,
+      collection: job.request.target_collection,
       properties: outputProperties as Record<string, unknown>,
       relationships: [
         {

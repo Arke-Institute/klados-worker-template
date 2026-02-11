@@ -58,11 +58,11 @@ export async function processJob(job: KladosJob): Promise<string[]> {
   // 2. Process it (AI calls, transformations, etc.)
   const result = await yourProcessingLogic(target);
 
-  // 3. Create output entity
+  // 3. Create output entity in target_collection (NOT job_collection!)
   const { data: output } = await job.client.api.POST('/entities', {
     body: {
       type: 'your_output_type',
-      collection: job.request.job_collection,
+      collection: job.request.target_collection,
       properties: { result },
     },
   });
@@ -71,6 +71,8 @@ export async function processJob(job: KladosJob): Promise<string[]> {
   return [output.id];
 }
 ```
+
+**Important**: Always create output entities in `target_collection` (where work happens), not `job_collection` (which is only for `klados_log` entities).
 
 ### 4. Register with Arke
 
