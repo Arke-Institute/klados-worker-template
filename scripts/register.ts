@@ -6,11 +6,13 @@
  * - Creates new klados with verification and API key
  * - Updates existing klados, re-verifying if endpoint changes
  * - Supports dry-run mode to preview changes
+ * - Supports migrating existing klados to workspace collection
  *
  * Usage:
- *   ARKE_USER_KEY=uk_... npx tsx scripts/register.ts              # Test network
- *   ARKE_USER_KEY=uk_... npx tsx scripts/register.ts --production # Main network
- *   ARKE_USER_KEY=uk_... npx tsx scripts/register.ts --dry-run    # Preview only
+ *   ARKE_USER_KEY=uk_... npx tsx scripts/register.ts                    # Test network
+ *   ARKE_USER_KEY=uk_... npx tsx scripts/register.ts --production       # Main network
+ *   ARKE_USER_KEY=uk_... npx tsx scripts/register.ts --dry-run          # Preview only
+ *   ARKE_USER_KEY=uk_... npx tsx scripts/register.ts --migrate-collection  # Move to workspace collection
  */
 
 import { readFileSync, writeFileSync, existsSync } from 'fs';
@@ -21,6 +23,9 @@ import {
   readState,
   writeState,
   getStateFilePath,
+  findWorkspaceConfig,
+  resolveWorkspaceCollection,
+  migrateKladosToCollection,
   type KladosConfig,
   type KladosRegistrationState,
   type DryRunResult,
@@ -106,9 +111,10 @@ async function main() {
   const isProduction =
     process.argv.includes('--production') || process.argv.includes('--prod');
   const isDryRun = process.argv.includes('--dry-run');
+  const migrateCollection = process.argv.includes('--migrate-collection');
   const network = isProduction ? 'main' : 'test';
 
-  console.log(`\n📦 Klados Registration (${network} network)${isDryRun ? ' [DRY RUN]' : ''}\n`);
+  console.log(`\n📦 Klados Registration (${network} network)${isDryRun ? ' [DRY RUN]' : ''}${migrateCollection ? ' [MIGRATE]' : ''}\n`);
 
   // Load agent config
   if (!existsSync('agent.json')) {
@@ -137,10 +143,54 @@ async function main() {
   // Create key store
   const keyStore = new CloudflareKeyStore(process.cwd());
 
+  // Check for workspace config (shared collection across multiple kladoi)
+  const workspace = findWorkspaceConfig();
+  let collectionId: string | undefined;
+  let updatedState = state;
+
+  if (workspace) {
+    console.log(`Found workspace config: ${workspace.path}`);
+    if (!isDryRun) {
+      const resolved = await resolveWorkspaceCollection(client, network, workspace.path);
+      collectionId = resolved.collectionId;
+      if (!resolved.created) {
+        console.log(`Using workspace collection: ${collectionId}`);
+      }
+
+      // Handle --migrate-collection: move existing klados to workspace collection
+      if (migrateCollection && state && state.collection_id !== collectionId) {
+        console.log(`\nMigrating klados from ${state.collection_id} to ${collectionId}...`);
+        await migrateKladosToCollection(client, state.klados_id, state.collection_id, collectionId);
+        // Update local state with new collection
+        updatedState = { ...state, collection_id: collectionId, updated_at: new Date().toISOString() };
+        writeState(stateFile, updatedState);
+        console.log(`  Updated local state`);
+      } else if (migrateCollection && state && state.collection_id === collectionId) {
+        console.log(`Klados already in workspace collection`);
+      }
+    } else {
+      const networkConfig = workspace.config[network];
+      if (networkConfig.collection_id) {
+        collectionId = networkConfig.collection_id;
+        console.log(`Would use workspace collection: ${collectionId}`);
+        if (migrateCollection && state && state.collection_id !== collectionId) {
+          console.log(`Would migrate klados from ${state.collection_id} to ${collectionId}`);
+        }
+      } else {
+        console.log(`Would create workspace collection: ${networkConfig.collection_label}`);
+      }
+    }
+    console.log('');
+  } else if (migrateCollection) {
+    console.warn('Warning: --migrate-collection requires a workspace config (.arke-workspace.json)');
+    console.log('');
+  }
+
   try {
-    // Sync klados
-    const result = await syncKlados(client, config, state, {
+    // Sync klados (use updatedState in case we migrated)
+    const result = await syncKlados(client, config, updatedState, {
       network,
+      collectionId,
       keyStore,
       dryRun: isDryRun,
       onDeploy: async () => {
