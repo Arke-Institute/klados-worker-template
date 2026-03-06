@@ -12,6 +12,7 @@
  *   ARKE_USER_KEY=uk_... npx tsx scripts/register.ts                    # Test network
  *   ARKE_USER_KEY=uk_... npx tsx scripts/register.ts --production       # Main network
  *   ARKE_USER_KEY=uk_... npx tsx scripts/register.ts --dry-run          # Preview only
+ *   ARKE_USER_KEY=uk_... npx tsx scripts/register.ts --force            # Force update (ignore hash)
  *   ARKE_USER_KEY=uk_... npx tsx scripts/register.ts --migrate-collection  # Move to workspace collection
  */
 
@@ -111,10 +112,11 @@ async function main() {
   const isProduction =
     process.argv.includes('--production') || process.argv.includes('--prod');
   const isDryRun = process.argv.includes('--dry-run');
+  const force = process.argv.includes('--force');
   const migrateCollection = process.argv.includes('--migrate-collection');
   const network = isProduction ? 'main' : 'test';
 
-  console.log(`\n📦 Klados Registration (${network} network)${isDryRun ? ' [DRY RUN]' : ''}${migrateCollection ? ' [MIGRATE]' : ''}\n`);
+  console.log(`\n📦 Klados Registration (${network} network)${isDryRun ? ' [DRY RUN]' : ''}${force ? ' [FORCE]' : ''}${migrateCollection ? ' [MIGRATE]' : ''}\n`);
 
   // Load agent config
   if (!existsSync('agent.json')) {
@@ -193,6 +195,7 @@ async function main() {
       collectionId,
       keyStore,
       dryRun: isDryRun,
+      force,
       onDeploy: async () => {
         console.log('\n🚀 Deploying worker...');
         execSync('wrangler deploy', { stdio: 'inherit' });

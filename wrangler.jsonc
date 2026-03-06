@@ -11,11 +11,16 @@
   },
 
   // Environment variables (non-secret)
+  // For dual-network deployment, set network-specific IDs
   "vars": {
-    "AGENT_ID": "your-klados-agent-id",
+    "AGENT_ID": "your-default-klados-id",
+    "AGENT_ID_TEST": "your-test-klados-id",
+    "AGENT_ID_MAIN": "your-main-klados-id",
     "AGENT_VERSION": "0.1.0"
   }
 
   // Secrets (set via `wrangler secret put`):
-  // - ARKE_AGENT_KEY: Your agent API key (ak_...)
+  // - ARKE_AGENT_KEY: Default agent API key (ak_...)
+  // - ARKE_AGENT_KEY_TEST: Test network agent API key (optional)
+  // - ARKE_AGENT_KEY_MAIN: Main network agent API key (optional)
 }

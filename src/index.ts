@@ -14,7 +14,7 @@
  */
 
 import { Hono } from 'hono';
-import { KladosJob, type KladosRequest } from '@arke-institute/rhiza';
+import { KladosJob, getKladosConfig, type KladosRequest } from '@arke-institute/rhiza';
 import { processJob } from './job';
 import type { Env } from './types';
 
@@ -61,12 +61,10 @@ app.get('/.well-known/arke-verification', (c) => {
 app.post('/process', async (c) => {
   const req = await c.req.json<KladosRequest>();
 
-  // Accept the job immediately
-  const job = KladosJob.accept(req, {
-    agentId: c.env.AGENT_ID,
-    agentVersion: c.env.AGENT_VERSION,
-    authToken: c.env.ARKE_AGENT_KEY,
-  });
+  // Accept the job using network-aware config
+  // This enables single worker deployment to serve both test and main networks
+  const config = getKladosConfig(c.env, req.network);
+  const job = KladosJob.accept(req, config);
 
   // Process in background - KladosJob handles:
   // - Writing initial log entry
